@@ -1,0 +1,83 @@
+name: Full Stack Application Deployment Test
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: 
+
+env:
+  COMPOSE_PROJECT_NAME: myapp
+
+jobs:
+  deploy-and-test:
+    runs-on: self-hosted 
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Create .env file from secrets
+      run: |
+        echo "Создание .env файла из секретов GitHub..."
+        cat > .env << EOF
+        DB_HOST=${{ secrets.DB_HOST }}
+        DB_PORT=${{ secrets.DB_PORT }}
+        DB_NAME=${{ secrets.DB_NAME }}
+        DB_USER=${{ secrets.DB_USER }}
+        DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+        APP_PORT=${{ secrets.APP_PORT }}
+        APP_SECRET=${{ secrets.APP_SECRET }}
+        API_KEY=${{ secrets.API_KEY }}
+        COMPOSE_PROJECT_NAME=${{ env.COMPOSE_PROJECT_NAME }}
+        EOF
+        echo ".env файл создан."
+
+    - name: Deploy with Docker Compose
+      run: |
+        echo "Запуск стека приложений..."
+        docker compose up -d --build
+        echo "Ожидание запуска сервисов (20 секунд)..."
+        sleep 20
+
+    - name: Verify containers are running
+      run: |
+        if docker compose ps | grep -q "Up"; then
+          echo "Все контейнеры запущены"
+          docker compose ps
+        else
+          echo "Ошибка: контейнеры не запустились"
+          docker compose logs
+          exit 1
+        fi
+
+    - name: Run application tests
+      run: |
+        echo "1. Тестирование связи с приложением и БД..."
+        
+        
+        if curl -f -s http://localhost:${{ secrets.APP_PORT }}/api/items > /dev/null; then
+          echo "API приложения отвечает"
+        else
+          echo "API приложения не отвечает"
+          exit 1
+        fi
+
+    - name: Create test report
+      run: |
+        echo "Создание отчета..."
+        cat > test-report.md << EOF
+        # Deployment Test Report
+        - Date: $(date)
+        - Application: Healthy
+        - Containers: Running
+        EOF
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: deployment-artifacts
+        path: |
+          .env
+          test-report.md
+        retention-days: 30
