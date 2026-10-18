@@ -34,6 +34,8 @@ jobs:
 
     - name: Deploy with Docker Compose
       run: |
+        echo "Очистка старых контейнеров (если есть)..."
+        docker compose down || true
         echo "Запуск стека приложений..."
         docker compose up -d --build
         echo "Ожидание запуска сервисов (20 секунд)..."
