@@ -3,14 +3,14 @@ name: Full Stack Application Deployment Test
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: 
+  workflow_dispatch:
 
 env:
   COMPOSE_PROJECT_NAME: myapp
 
 jobs:
   deploy-and-test:
-    runs-on: self-hosted 
+    runs-on: self-hosted
 
     steps:
     - name: Checkout code
@@ -19,18 +19,18 @@ jobs:
     - name: Create .env file from secrets
       run: |
         echo "Создание .env файла из секретов GitHub..."
-        cat > .env << EOF
-        DB_HOST=${{ secrets.DB_HOST }}
-        DB_PORT=${{ secrets.DB_PORT }}
-        DB_NAME=${{ secrets.DB_NAME }}
-        DB_USER=${{ secrets.DB_USER }}
-        DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-        APP_PORT=${{ secrets.APP_PORT }}
-        APP_SECRET=${{ secrets.APP_SECRET }}
-        API_KEY=${{ secrets.API_KEY }}
-        COMPOSE_PROJECT_NAME=${{ env.COMPOSE_PROJECT_NAME }}
-        EOF
+        echo "DB_HOST=${{ secrets.DB_HOST }}" > .env
+        echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
+        echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
+        echo "DB_USER=${{ secrets.DB_USER }}" >> .env
+        echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+        echo "APP_PORT=${{ secrets.APP_PORT }}" >> .env
+        echo "APP_SECRET=${{ secrets.APP_SECRET }}" >> .env
+        echo "API_KEY=${{ secrets.API_KEY }}" >> .env
+        echo "COMPOSE_PROJECT_NAME=${{ env.COMPOSE_PROJECT_NAME }}" >> .env
         echo ".env файл создан."
+        echo "Проверка содержимого:"
+        cat .env
 
     - name: Deploy with Docker Compose
       run: |
@@ -55,8 +55,6 @@ jobs:
     - name: Run application tests
       run: |
         echo "1. Тестирование связи с приложением и БД..."
-        
-        
         if curl -f -s http://localhost:${{ secrets.APP_PORT }}/api/items > /dev/null; then
           echo "API приложения отвечает"
         else
@@ -82,4 +80,5 @@ jobs:
         path: |
           .env
           test-report.md
+        include-hidden-files: true
         retention-days: 30
